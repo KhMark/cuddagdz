@@ -18,12 +18,8 @@
 #define CHECK_ERR(err, a) {}
 #endif
 
-// SoA: separate arrays for R, G, B
-// Input: r_in[], g_in[], b_in[]
-// Output: r_out[], g_out[], b_out[]
-
 __global__ void blurKernelSoA(
-    const float* __restrict__ r_in,//restrict  hint to the compiler that this pointer is the only way to access the data it points to during the scope of the function.
+    const float* __restrict__ r_in,
     const float* __restrict__ g_in,
     const float* __restrict__ b_in,
     float* __restrict__ r_out,
@@ -62,7 +58,6 @@ __global__ void blurKernelSoA(
     b_out[out_idx] = sum_b / count;
 }
 
-// CPU version (SoA)
 void cpuBlurSoA(
     const float* r_in, const float* g_in, const float* b_in,
     float* r_out, float* g_out, float* b_out,
@@ -101,10 +96,6 @@ void cpuBlurSoA(
 //=============================================================================================
 
 int main() {
-    //const int WIDTH = 512;
-    //const int HEIGHT = 512;
-    //const int WIDTH = 10240;
-    //const int HEIGHT = 10240;
     const int WIDTH = 1024;
     const int HEIGHT = 1024;
     const int NUM_PIXELS = WIDTH * HEIGHT;
@@ -112,12 +103,10 @@ int main() {
 
     printf("SoA Blur: Image size %dx%d (%d pixels)\n", WIDTH, HEIGHT, NUM_PIXELS);
 
-    // Timers
     cudaEvent_t t_start, t_stop;
     cudaEventCreate(&t_start);
     cudaEventCreate(&t_stop);
 
-    // Host memory (pinned)
     float *h_r_in, *h_g_in, *h_b_in;
     float *h_r_out_gpu, *h_g_out_gpu, *h_b_out_gpu;
     cudaMallocHost(&h_r_in, size);
@@ -138,7 +127,6 @@ int main() {
         return -1;
     }
 
-    // Device memory
     float *d_r_in, *d_g_in, *d_b_in;
     float *d_r_out, *d_g_out, *d_b_out;
     cudaMalloc(&d_r_in, size);
@@ -149,7 +137,6 @@ int main() {
     cudaMalloc(&d_b_out, size);
     CHECK_ERR(cudaGetLastError(), "cudaMalloc device");
 
-    // Initialize input
     srand(42);
     for (int i = 0; i < NUM_PIXELS; i++) {
         h_r_in[i] = (float)rand() / RAND_MAX * 255.0f;
@@ -157,7 +144,6 @@ int main() {
         h_b_in[i] = (float)rand() / RAND_MAX * 255.0f;
     }
 
-    // --- CPU blur ---
     auto tcpu_start = std::chrono::high_resolution_clock::now();
     cpuBlurSoA(h_r_in, h_g_in, h_b_in,
                h_r_out_cpu, h_g_out_cpu, h_b_out_cpu,
@@ -166,7 +152,6 @@ int main() {
     float cpu_ms = std::chrono::duration_cast<std::chrono::microseconds>(tcpu_stop - tcpu_start).count() / 1000.0f;
     printf("CPU time: %.3f ms\n", cpu_ms);
 
-    // --- GPU blur ---
     cudaMemcpy(d_r_in, h_r_in, size, cudaMemcpyHostToDevice);
     cudaMemcpy(d_g_in, h_g_in, size, cudaMemcpyHostToDevice);
     cudaMemcpy(d_b_in, h_b_in, size, cudaMemcpyHostToDevice);
@@ -194,7 +179,6 @@ int main() {
     cudaEventElapsedTime(&gpu_ms, t_start, t_stop);
     printf("GPU time: %.3f ms\n", gpu_ms);
 
-    // --- Validation ---
     const float tolerance = 1e-4f;
     int errors = 0;
     float max_err = 0.0f;
@@ -223,7 +207,6 @@ int main() {
     printf("\nSoA Validation: %d errors in %d samples, max error = %.6f\n",
            errors, sample_count, max_err);
 
-    // Cleanup
     cudaFreeHost(h_r_in); cudaFreeHost(h_g_in); cudaFreeHost(h_b_in);
     cudaFreeHost(h_r_out_gpu); cudaFreeHost(h_g_out_gpu); cudaFreeHost(h_b_out_gpu);
     free(h_r_out_cpu); free(h_g_out_cpu); free(h_b_out_cpu);
@@ -233,4 +216,5 @@ int main() {
     cudaEventDestroy(t_stop);
 
     return 0;
+
 }
