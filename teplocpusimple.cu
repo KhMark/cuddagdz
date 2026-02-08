@@ -104,11 +104,6 @@ int main(int argc, char* argv[]){
     double time_end = 0.1;
     int step_cur = 0;
 
-    printf("Solving heat equation until t = %.6f\n", time_end);
-    printf("Grid: %dx%d, dx=%.6f, dy=%.6f\n", NX, NY, DX, DY);
-    printf("Automatic time step: dt=%.8f (for stability)\n", DT);
-    printf("Courant number: %.6f\n", C * DT * (1.0/(DX*DX) + 1.0/(DY*DY)));
-
     double** u1=allocate_2d_array(NX,NY);
     double** u2=allocate_2d_array(NX,NY);
     init_border(u1);
@@ -163,4 +158,5 @@ int main(int argc, char* argv[]){
     free_2_array(u2,NX);
     return -0;
 };
+
 
