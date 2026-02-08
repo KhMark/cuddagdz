@@ -8,20 +8,18 @@
 #include <algorithm>
 #include <chrono>
 
-// Параметры задачи
-#define NX 256           // Количество узлов по x
-#define NY 256           // Количество узлов по y
-#define DX (1.0/(NX-1)) // Шаг по пространству
+#define NX 256          
+#define NY 256         
+#define DX (1.0/(NX-1))
 #define DY (1.0/(NY-1))
-#define C 1.0           // Коэффициент теплопроводности
+#define C 1.0          
 
-// Автоматический расчет устойчивого шага по времени
 #define DT (0.25 * fmin(DX*DX, DY*DY) / C) // Условие Куранта
 
 double** allocate_2d_array(int rows, int cols) {
     double** arr = (double**)malloc(rows * sizeof(double*));
     for (int i = 0; i < rows; i++) {
-        arr[i] = (double*)calloc(cols, sizeof(double)); // Используем calloc для инициализации нулями
+        arr[i] = (double*)calloc(cols, sizeof(double)); 
     }
     return arr;
 }
@@ -33,7 +31,6 @@ void free_2d_array(double** arr, int rows) {
     free(arr);
 }
 
-// Инициализация начальных и граничных условий
 void initialize(double** u) {
     // Начальное условие: u(x,y,0) = 1.0
     for (int i = 0; i < NX; i++) {
@@ -42,7 +39,6 @@ void initialize(double** u) {
         }
     }
 
-    // Граничные условия: u = 2.0 на всех границах
     for (int i = 0; i < NX; i++) {
         u[i][0] = 2.0;
         u[i][NY-1] = 2.0;
@@ -54,12 +50,10 @@ void initialize(double** u) {
     }
 }
 
-// Один шаг по времени методом крест
 void time_step(double** u, double** u_new) {
     double dx2 = DX * DX;
     double dy2 = DY * DY;
 
-    // Копируем граничные условия
     for (int i = 0; i < NX; i++) {
         u_new[i][0] = u[i][0];
         u_new[i][NY-1] = u[i][NY-1];
@@ -69,7 +63,6 @@ void time_step(double** u, double** u_new) {
         u_new[NX-1][j] = u[NX-1][j];
     }
 
-    // Вычисление новых значений во внутренних точках
     for (int i = 1; i < NX - 1; i++) {
         for (int j = 1; j < NY - 1; j++) {
             double laplacian = (u[i-1][j] - 2*u[i][j] + u[i+1][j]) / dx2 +
@@ -77,7 +70,6 @@ void time_step(double** u, double** u_new) {
 
             u_new[i][j] = u[i][j] + DT * C * laplacian;
 
-            // Проверка на численную устойчивость
             if (!std::isfinite(u_new[i][j])) {
                 printf("Numerical instability at (%d, %d)! Value = %f\n", i, j, u_new[i][j]);
                 return;
@@ -86,7 +78,6 @@ void time_step(double** u, double** u_new) {
     }
 }
 
-// Вычисление максимального изменения за шаг (для мониторинга)
 double max_change(double** u, double** u_new) {
     double max_diff = 0.0;
     for (int i = 1; i < NX - 1; i++) {
@@ -142,7 +133,6 @@ int main(int argc, char* argv[]) {
     printf("Step 0: t = %.6f\n", t);
     auto start_computation = std::chrono::high_resolution_clock::now();
 
-    // Основной цикл по времени
     while (t < target_time) {
         // Если осталось меньше чем DT, уменьшаем шаг
         double actual_dt = DT;
@@ -156,13 +146,11 @@ int main(int argc, char* argv[]) {
         t += actual_dt;
         step++;
 
-        // Вывод прогресса каждые 1000 шагов
         if (step % 1000 == 0) {
             double max_diff = max_change(u_next, u_current);
             printf("Step %d: t = %.6f, max change = %.8f\n", step, t, max_diff);
         }
 
-        // Аварийный выход при неустойчивости
         if (step > 1000000) { // Защита от бесконечного цикла
             printf("Too many steps, possible instability!\n");
             break;
@@ -175,11 +163,9 @@ int main(int argc, char* argv[]) {
 
     save_to_file(u_current, "solution_final.txt", t);
 
-    // СИММЕТРИЧНЫЙ вывод среза для проверки (ИСПРАВЛЕННЫЙ)
     printf("\nSymmetric slice at y = %d (middle):\n", NY/2);
     printf("Left part (from center to left boundary):\n");
 
-    // Используем безопасные границы
     int center = NX / 2;
     int max_offset = center; // максимальный offset до левой границы
 
@@ -187,7 +173,6 @@ int main(int argc, char* argv[]) {
         int left_x = center - offset;
         int right_x = center + offset;
 
-        // Проверяем границы для безопасности
         if (left_x >= 0 && left_x < NX && right_x >= 0 && right_x < NX) {
             printf("  u[%3d][%3d] = %8.6f  |  u[%3d][%3d] = %8.6f\n",
                    left_x, NY/2, u_current[left_x][NY/2],
@@ -195,7 +180,6 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // Проверка симметрии более детально (только для безопасных offset)
     printf("\nDetailed symmetry check around center:\n");
     for (int offset = 1; offset <= 5; offset++) {
         int left_x = center - offset;
@@ -224,4 +208,5 @@ int main(int argc, char* argv[]) {
     free_2d_array(u_next, NX);
 
     return 0;
+
 }
