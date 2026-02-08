@@ -8,15 +8,12 @@
 #include <algorithm>
 #include <chrono>
 
-// Параметры задачи
-//#define NX 256           // Количество узлов по x
-//#define NY 256           // Количество узлов по y
-#define NX 128           // Количество узлов по x
-#define NY 128           // Количество узлов по y
-#define DX (1.0/(NX-1)) // Шаг по пространству
+#define NX 128        
+#define NY 128        
+#define DX (1.0/(NX-1)) 
 #define DY (1.0/(NY-1))
-#define MAX_ITER 50000   // Максимальное количество итераций
-#define TOLERANCE 1e-5   // Точность решения
+#define MAX_ITER 50000  
+#define TOLERANCE 1e-5  
 
 double** allocate_2d_array(int rows, int cols) {
     double** arr = (double**)malloc(rows * sizeof(double*));
@@ -33,16 +30,13 @@ void free_2d_array(double** arr, int rows) {
     free(arr);
 }
 
-// Инициализация начальных и граничных условий
 void initialize(double** u) {
-    // Внутренняя область инициализируется нулями
     for (int i = 0; i < NX; i++) {
         for (int j = 0; j < NY; j++) {
             u[i][j] = 0.0;
         }
     }
 
-    // Граничные условия из новой задачи
     for (int i = 0; i < NX; i++) {
         u[i][0] = exp(1.0 - i*DX);    // u(x,0) = e^(1-x)
         u[i][NY-1] = 1.0;             // u(x,1) = 1.0
@@ -54,13 +48,11 @@ void initialize(double** u) {
     }
 }
 
-// Простой метод Якоби для уравнения Лапласа
 void jacobi_step(double** u, double** u_new) {
     double dx2 = DX * DX;
     double dy2 = DY * DY;
     double factor = 0.5 / (1.0/dx2 + 1.0/dy2);
 
-    // Копируем граничные условия
     for (int i = 0; i < NX; i++) {
         u_new[i][0] = u[i][0];
         u_new[i][NY-1] = u[i][NY-1];
@@ -70,7 +62,6 @@ void jacobi_step(double** u, double** u_new) {
         u_new[NX-1][j] = u[NX-1][j];
     }
 
-    // Вычисление новых значений во внутренних точках
     for (int i = 1; i < NX - 1; i++) {
         for (int j = 1; j < NY - 1; j++) {
             u_new[i][j] = factor * (
@@ -81,7 +72,6 @@ void jacobi_step(double** u, double** u_new) {
     }
 }
 
-// Вычисление максимального изменения за шаг
 double max_change(double** u, double** u_new) {
     double max_diff = 0.0;
     for (int i = 1; i < NX - 1; i++) {
@@ -95,7 +85,6 @@ double max_change(double** u, double** u_new) {
     return max_diff;
 }
 
-// Вычисление невязки (норма C)//------------------------------------------------------------------------
 double compute_residual(double** u) {
     double max_residual = 0.0;
     double dx2 = DX * DX;
@@ -115,7 +104,6 @@ double compute_residual(double** u) {
     return max_residual;
 }
 
-// Вычисление нормы L1
 double compute_l1_norm(double** u) {
     double sum = 0.0;
     for (int i = 0; i < NX; i++) {
@@ -156,7 +144,6 @@ int main(int argc, char* argv[]) {
 
     auto start_computation = std::chrono::high_resolution_clock::now();
 
-    // Основной итерационный цикл
     int iter = 0;
     double max_diff = 0.0;
     double residual = 0.0;
@@ -174,13 +161,11 @@ int main(int argc, char* argv[]) {
 
         std::swap(u_current, u_next);
 
-        // Вывод прогресса каждые 1000 итераций
         if (iter % 1000 == 0) {
             printf("%5d  %12.6e  %12.6e  %12.6e\n",
                    iter, residual, max_diff, l1_norm);
         }
 
-        // Критерий остановки
         if (residual < TOLERANCE && max_diff < TOLERANCE) {
             printf("%5d  %12.6e  %12.6e  %12.6e\n",
                    iter, residual, max_diff, l1_norm);
@@ -204,17 +189,14 @@ int main(int argc, char* argv[]) {
 
     save_to_file(u_current, "solution_laplace.txt");
 
-    // Анализ решения
     printf("\n=== Solution Analysis ===\n");
 
-    // Проверка граничных условий
     printf("Boundary conditions check:\n");
     printf("u(0,0) = %.6f (should be e = %.6f)\n", u_current[0][0], exp(1.0));
     printf("u(1,0) = %.6f (should be 1.0)\n", u_current[NX-1][0]);
     printf("u(0,1) = %.6f (should be 1.0)\n", u_current[0][NY-1]);
     printf("u(1,1) = %.6f (should be 1.0)\n", u_current[NX-1][NY-1]);
 
-    // Проверка внутренних точек
     printf("\nInternal points:\n");
     printf("u(0.5, 0.5) = %.6f\n", u_current[NX/2][NY/2]);
     printf("u(0.25, 0.25) = %.6f\n", u_current[NX/4][NY/4]);
@@ -230,4 +212,5 @@ int main(int argc, char* argv[]) {
     free_2d_array(u_next, NX);
 
     return 0;
+
 }
