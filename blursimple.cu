@@ -55,7 +55,6 @@ __global__ void kernelblur(const float* r_inarr,const float* g_inarr,const float
   b_ouarr[outind] = sum_b/count;
 }
 
-//all at the same time
 void cpublur(const float* r_inarr,const float* g_inarr,const float* b_inarr, float* r_ouarr, float* g_ouarr, float* b_ouarr,const int width,const int height){
 
 
@@ -172,11 +171,10 @@ int main() {
     cudaEventElapsedTime(&gtime, tstar, tstop);
     printf("GPU time: %.3f ms\n", gtime);
 
-    // --- Validation ---
-    const float TOL = 1e-3f; // tolerance for floating-point comparison
+    const float TOL = 1e-3f; 
     bool valid = true;
     int mismatch_count = 0;
-    const int max_report = 5; // report first few mismatches
+    const int max_report = 5;
 
     for (int i = 0; i < N_PXL; ++i) {
     float dr = fabsf(h_r_ou[i] - g_r_ou[i]);
@@ -204,4 +202,5 @@ int main() {
     cudaEventDestroy(tstop);
 
     return 0;
+
 }
