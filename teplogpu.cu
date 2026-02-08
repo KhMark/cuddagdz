@@ -8,7 +8,6 @@
 #include <algorithm>
 #include <chrono>
 
-// Параметры задачи
 #define NX 256
 #define NY 256
 #define DX (1.0f/(NX-1))
@@ -16,7 +15,6 @@
 #define C 1.0f
 #define DT (0.25f * fminf(DX*DX, DY*DY) / C)
 
-// Размер блока------------
 #define BLOCK_SIZE 16
 
 #define CHECK_CUDA_ERROR(err) \
@@ -26,7 +24,6 @@ if (err != cudaSuccess) { \
     }
 
 
-// CUDA kernel для одного шага по времени
 __global__ void time_step_kernel(double* u, double* u_new, int width, int height,
                                 double dx2, double dy2, double dt_c) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -36,20 +33,17 @@ __global__ void time_step_kernel(double* u, double* u_new, int width, int height
 
     int idx = j * width + i;
 
-    // Граничные условия
     if (i == 0 || i == width-1 || j == 0 || j == height-1) {
         u_new[idx] = u[idx];
         return;
     }
 
-    // Вычисление лапласиана для внутренних точек
     double laplacian = (u[idx - 1] - 2*u[idx] + u[idx + 1]) / dx2 +
                       (u[idx - width] - 2*u[idx] + u[idx + width]) / dy2;
 
     u_new[idx] = u[idx] + dt_c * C * laplacian;
 }
 
-// CUDA kernel для инициализации
 __global__ void initialize_kernel(double* u, int width, int height) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     int j = blockIdx.y * blockDim.y + threadIdx.y;
@@ -151,7 +145,6 @@ int main() {
     for (int i = 0; i < NX * NY; i++) {
         h_u[i] = 1.0;
     }
-    // Граничные условия
     for (int i = 0; i < NX; i++) {
         h_u[i] = 2.0;
         h_u[(NY-1)*NX + i] = 2.0;
@@ -183,9 +176,7 @@ int main() {
         t += actual_dt;
         step++;
 
-        // Проверка максимального изменения каждые 1000 шагов
         if (step % 1000 == 0) {
-            // Копируем оба массива на CPU для вычисления max_change
             copy_between_cpu_gpu(h_u, d_u, NX * NY, false);
             copy_between_cpu_gpu(h_u_new, d_u_new, NX * NY, false);
 
@@ -203,7 +194,6 @@ int main() {
 
     printf("Final: step %d, t = %.6f\n", step, t);
 
-    // Копируем результат обратно на CPU
     copy_between_cpu_gpu(h_u, d_u, NX * NY, false);
     save_to_file(h_u, "solution_final_cuda_symmetric.txt", t, NX, NY);
 
@@ -217,7 +207,6 @@ int main() {
                NX/2 + offset, NY/2, h_u[right_idx]);
     }
 
-    // Проверка симметрии более детально
     printf("\nDetailed symmetry check around center:\n");
     int center = NX / 2;
     for (int offset = 1; offset <= 5; offset++) {
@@ -246,4 +235,5 @@ int main() {
     free_gpu_memory(d_u_new);
 
     return 0;
+
 }
